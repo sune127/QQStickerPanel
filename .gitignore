@@ -1,0 +1,29 @@
+# Build output
+bin/
+obj/
+artifacts/
+
+# IDE and local agent files
+.idea/
+.vs/
+.vscode/
+.claude/
+CLAUDE.md
+
+# Local planning notes
+计划.md
+待落地计划.md
+archive/
+
+# Local samples and scratch files
+1.jpg
+
+# User/runtime data
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+Thumbs.db
+Desktop.ini

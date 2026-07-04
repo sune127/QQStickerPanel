@@ -1,0 +1,447 @@
+<Window x:Class="QQStickerPanel.MainWindow"
+        x:Name="RootWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:QQStickerPanel.Converters"
+        xmlns:controls="clr-namespace:QQStickerPanel.Controls"
+        mc:Ignorable="d"
+        Title="QQ 表情包面板"
+        Icon="Assets/AppIcon.ico"
+        Width="320"
+        Height="640"
+        MinWidth="280"
+        MinHeight="360"
+        ShowActivated="False"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        Background="Transparent"
+        KeyDown="OnWindowKeyDown">
+    <Window.Resources>
+        <converters:ImagePathConverter x:Key="ImagePathConverter" />
+        <converters:CategorySelectionConverter x:Key="CategorySelectionConverter" />
+
+        <Style x:Key="SelectableCategoryButtonStyle" TargetType="Button" BasedOn="{StaticResource CategoryButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Value="True">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource CategorySelectionConverter}">
+                            <Binding />
+                            <Binding Path="DataContext.SelectedCategory" RelativeSource="{RelativeSource AncestorType=Window}" />
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SelectableStickerButtonStyle" TargetType="Button" BasedOn="{StaticResource StickerButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BadgeTextStyle" TargetType="TextBlock">
+            <Setter Property="Padding" Value="4,1" />
+            <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="8"
+            Padding="{StaticResource WindowPadding}"
+            Background="{StaticResource PanelBackgroundBrush}"
+            CornerRadius="{StaticResource WindowCornerRadius}"
+            Effect="{StaticResource PanelShadow}"
+            AllowDrop="True"
+            DragEnter="OnPanelDragEnter"
+            DragOver="OnPanelDragOver"
+            Drop="OnPanelDrop">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,8" MouseLeftButtonDown="OnHeaderMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="QQ 表情包"
+                               FontSize="15"
+                               FontWeight="SemiBold" />
+                    <TextBlock Style="{StaticResource CaptionTextStyle}"
+                               Margin="0,2,0,0"
+                               Text="右键状态栏打开更多操作" />
+                </StackPanel>
+                <Border Grid.Column="1"
+                        MinWidth="26"
+                        Height="24"
+                        Padding="8,0"
+                        Background="{StaticResource AccentSoftBrush}"
+                        BorderBrush="{StaticResource AccentBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12">
+                    <TextBlock Text="QQ"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                </Border>
+                <Button Grid.Column="2"
+                        Width="24"
+                        Height="24"
+                        MinWidth="24"
+                        MinHeight="24"
+                        Margin="6,0,0,0"
+                        Padding="0"
+                        Content="×"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        ToolTip="关闭"
+                        Click="OnCloseWindowClick" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          Margin="0,0,0,8"
+                          HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollBarVisibility="Disabled"
+                          PreviewMouseWheel="OnCategoryScrollViewerPreviewMouseWheel">
+                <ScrollViewer.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="新建分类"
+                                  Click="OnCreateCategoryClick" />
+                        <MenuItem Header="打开表情目录"
+                                  Command="{Binding OpenStickerRootCommand}" />
+                        <MenuItem Header="选择表情目录"
+                                  Click="OnChangeStickerRootClick" />
+                    </ContextMenu>
+                </ScrollViewer.ContextMenu>
+                <ItemsControl ItemsSource="{Binding Categories}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource SelectableCategoryButtonStyle}"
+                                    AllowDrop="True"
+                                    PreviewMouseLeftButtonDown="OnCategoryMouseLeftButtonDown"
+                                    PreviewMouseMove="OnCategoryMouseMove"
+                                    DragEnter="OnCategoryDragEnter"
+                                    DragOver="OnCategoryDragOver"
+                                    Drop="OnCategoryDrop"
+                                    Content="{Binding DisplayName}"
+                                    Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}">
+                                <Button.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="新建分类"
+                                                  Click="OnCreateCategoryClick" />
+                                        <Separator />
+                                        <MenuItem Header="打开分类目录"
+                                                  Command="{Binding DataContext.OpenCategoryFolderCommand, Source={x:Reference RootWindow}}"
+                                                  CommandParameter="{Binding}" />
+                                        <MenuItem Header="重命名分类"
+                                                  Click="OnRenameCategoryClick" />
+                                        <MenuItem Header="合并到分类"
+                                                  ItemsSource="{Binding DataContext.MoveTargetCategories, Source={x:Reference RootWindow}}">
+                                            <MenuItem.ItemContainerStyle>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                    <Setter Property="Header" Value="{Binding Name}" />
+                                                    <EventSetter Event="Click" Handler="OnMergeCategoryClick" />
+                                                </Style>
+                                            </MenuItem.ItemContainerStyle>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="删除空分类"
+                                                  Command="{Binding DataContext.DeleteEmptyCategoryCommand, Source={x:Reference RootWindow}}"
+                                                  CommandParameter="{Binding}" />
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Border Grid.Row="2"
+                    Background="{StaticResource CardMutedBackgroundBrush}"
+                    BorderBrush="{StaticResource BorderSoftBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource CardCornerRadius}">
+                <ListBox x:Name="StickerRowsList"
+                         ItemsSource="{Binding StickerRows}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="4"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="True"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         SizeChanged="OnStickerRowsListSizeChanged">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Left" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Focusable" Value="False" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter />
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <ItemsControl ItemsSource="{Binding}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                <Button Style="{StaticResource SelectableStickerButtonStyle}"
+                                        PreviewMouseLeftButtonDown="OnStickerMouseLeftButtonDown"
+                                        PreviewMouseMove="OnStickerMouseMove"
+                                        MouseDoubleClick="OnStickerMouseDoubleClick"
+                                        PreviewKeyDown="OnStickerPreviewKeyDown"
+                                        Command="{Binding DataContext.CopyStickerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.ToolTip>
+                                        <ToolTip>
+                                            <StackPanel Width="240">
+                                                <Border Height="220"
+                                                        Padding="6"
+                                                        Background="{StaticResource CardMutedBackgroundBrush}"
+                                                        CornerRadius="{StaticResource SmallCornerRadius}">
+                                                    <Grid>
+                                                        <Image Source="{Binding FilePath, IsAsync=True, Converter={StaticResource ImagePathConverter}, ConverterParameter=360}"
+                                                               Stretch="Uniform"
+                                                               SnapsToDevicePixels="True" />
+                                                        <controls:AnimatedImage SourcePath="{Binding FilePath}"
+                                                                                IsAnimationEnabled="{Binding IsAnimated}"
+                                                                                Stretch="Uniform"
+                                                                                SnapsToDevicePixels="True" />
+                                                    </Grid>
+                                                </Border>
+                                                <TextBlock Margin="0,8,0,0"
+                                                           Text="{Binding FileName}"
+                                                           TextAlignment="Center"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Style="{StaticResource CaptionTextStyle}"
+                                                           Margin="0,4,0,0"
+                                                           Text="{Binding CategoryName}"
+                                                           TextAlignment="Center" />
+                                                <TextBlock Style="{StaticResource CaptionTextStyle}"
+                                                           Margin="0,4,0,0"
+                                                           Foreground="{StaticResource AccentBrush}"
+                                                           Text="{Binding TagText}"
+                                                           TextAlignment="Center"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Style="{StaticResource CaptionTextStyle}"
+                                                           Margin="0,4,0,0"
+                                                           Foreground="{StaticResource WarningBrush}"
+                                                           Text="{Binding AnimationHint}"
+                                                           TextAlignment="Center" />
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="复制"
+                                                      Command="{Binding DataContext.CopyStickerCommand, Source={x:Reference RootWindow}}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="收藏"
+                                                      IsCheckable="True"
+                                                      IsChecked="{Binding IsFavorite, Mode=OneWay}"
+                                                      Command="{Binding DataContext.ToggleFavoriteCommand, Source={x:Reference RootWindow}}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="重命名"
+                                                      Click="OnRenameStickerClick" />
+                                            <MenuItem Header="设置标签"
+                                                      Click="OnSetStickerTagsClick" />
+                                            <MenuItem Header="给选中添加标签"
+                                                      Click="OnBatchAddTagsClick" />
+                                            <MenuItem Header="清空标签"
+                                                      Click="OnClearStickerTagsClick" />
+                                            <MenuItem Header="批量重命名选中"
+                                                      Click="OnBatchRenameSelectedClick" />
+                                            <MenuItem Header="移动到分类"
+                                                      Tag="{Binding}"
+                                                      ItemsSource="{Binding DataContext.MoveTargetCategories, Source={x:Reference RootWindow}}">
+                                                <MenuItem.ItemContainerStyle>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                        <Setter Property="Header" Value="{Binding Name}" />
+                                                        <EventSetter Event="Click" Handler="OnMoveStickerClick" />
+                                                    </Style>
+                                                </MenuItem.ItemContainerStyle>
+                                            </MenuItem>
+                                            <MenuItem Header="打开所在文件夹"
+                                                      Command="{Binding DataContext.OpenStickerFolderCommand, Source={x:Reference RootWindow}}"
+                                                      CommandParameter="{Binding}" />
+                                            <Separator />
+                                            <MenuItem Header="移入回收站"
+                                                      Command="{Binding DataContext.DeleteStickerCommand, Source={x:Reference RootWindow}}"
+                                                      CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <StackPanel>
+                                        <Grid Width="68" Height="68">
+                                            <Image Margin="3"
+                                                   Source="{Binding FilePath, IsAsync=True, Converter={StaticResource ImagePathConverter}, ConverterParameter=128}"
+                                                   Stretch="Uniform"
+                                                   SnapsToDevicePixels="True" />
+                                            <Border Margin="4,0,0,4"
+                                                    Padding="4,1"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Bottom"
+                                                    Background="{StaticResource OverlayAccentBrush}"
+                                                    CornerRadius="5">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAnimated}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Style="{StaticResource BadgeTextStyle}" Text="GIF" />
+                                            </Border>
+                                            <Border Margin="0,4,4,0"
+                                                    Width="18"
+                                                    Height="18"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Background="#CCFFFFFF"
+                                                    CornerRadius="9">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="★"
+                                                           Foreground="{StaticResource WarningBrush}"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                        </Grid>
+                                        <TextBlock Margin="0,3,0,0"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Text="{Binding TagText}"
+                                                   TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   FontSize="10" />
+                                    </StackPanel>
+                                </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Grid Grid.Row="3" Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Text="{Binding StatusText}"
+                           TextTrimming="CharacterEllipsis">
+                    <TextBlock.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="导入文件"
+                                      Click="OnImportFilesClick" />
+                            <MenuItem Header="选择表情目录"
+                                      Click="OnChangeStickerRootClick" />
+                            <MenuItem Header="清理失效记录"
+                                      Command="{Binding PruneMissingStateCommand}" />
+                            <MenuItem Header="清理重复表情"
+                                      Click="OnDeleteDuplicateStickersClick" />
+                            <MenuItem Header="确认导入"
+                                      Command="{Binding ConfirmPendingImportCommand}" />
+                            <MenuItem Header="取消导入"
+                                      Command="{Binding CancelPendingImportCommand}" />
+                            <MenuItem Header="快捷键说明"
+                                      Click="OnShortcutHelpClick" />
+                            <MenuItem Header="打开配置文件"
+                                      Command="{Binding OpenSettingsFileCommand}" />
+                            <MenuItem Header="设置"
+                                      Click="OnOpenSettingsClick" />
+                            <MenuItem Header="固定/取消固定 QQ 窗口"
+                                      Click="OnTogglePinQQWindowClick" />
+                            <MenuItem Header="暂停/恢复吸附"
+                                      Click="OnToggleDockPauseClick" />
+                            <MenuItem Header="自由停靠/恢复吸附"
+                                      Click="OnToggleFreeDockClick" />
+                            <MenuItem Header="循环吸附位置"
+                                      Command="{Binding ToggleDockSideCommand}" />
+                            <MenuItem Header="面板宽度">
+                                <MenuItem Header="变窄"
+                                          Command="{Binding NarrowPanelCommand}" />
+                                <MenuItem Header="变宽"
+                                          Command="{Binding WidenPanelCommand}" />
+                                <MenuItem Header="恢复默认"
+                                          Command="{Binding ResetPanelWidthCommand}" />
+                            </MenuItem>
+                        </ContextMenu>
+                    </TextBlock.ContextMenu>
+                </TextBlock>
+                <Button Grid.Column="1"
+                        Height="28"
+                        MinWidth="64"
+                        Margin="4,0,0,0"
+                        Padding="8,2"
+                        Content="取消选择"
+                        Command="{Binding ClearStickerSelectionCommand}" />
+                <Button Grid.Column="2"
+                        Height="28"
+                        MinWidth="64"
+                        Margin="4,0,0,0"
+                        Padding="8,2"
+                        Content="打开目录"
+                        Command="{Binding OpenStickerRootCommand}" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
