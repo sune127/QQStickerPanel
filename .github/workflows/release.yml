@@ -41,16 +41,18 @@ jobs:
         shell: pwsh
         run: .\scripts\publish-win-x64.ps1 -DeploymentMode SelfContainedSingleFile
 
-      - name: Package assets
+      - name: Prepare release assets
         shell: pwsh
         run: |
-          Compress-Archive -Force `
+          Copy-Item `
             -Path .\artifacts\QQStickerPanel-win-x64-framework-dependent\QQStickerPanel.exe `
-            -DestinationPath .\artifacts\QQStickerPanel-win-x64-framework-dependent.zip
+            -Destination .\artifacts\QQStickerPanel-win-x64-framework-dependent.exe `
+            -Force
 
-          Compress-Archive -Force `
+          Copy-Item `
             -Path .\artifacts\QQStickerPanel-win-x64-self-contained\QQStickerPanel.exe `
-            -DestinationPath .\artifacts\QQStickerPanel-win-x64-self-contained.zip
+            -Destination .\artifacts\QQStickerPanel-win-x64-self-contained.exe `
+            -Force
 
       - name: Create GitHub Release
         shell: pwsh
@@ -62,8 +64,8 @@ jobs:
           @"
           ## Downloads
 
-          - `QQStickerPanel-win-x64-framework-dependent.zip`: smaller package. Requires Microsoft .NET 8 Windows Desktop Runtime x64.
-          - `QQStickerPanel-win-x64-self-contained.zip`: larger package. Does not require a separate .NET runtime installation.
+          - `QQStickerPanel-win-x64-framework-dependent.exe`: smaller executable. Requires Microsoft .NET 8 Windows Desktop Runtime x64.
+          - `QQStickerPanel-win-x64-self-contained.exe`: larger executable. Does not require a separate .NET runtime installation.
 
           ## Validation
 
@@ -71,8 +73,8 @@ jobs:
           "@ | Set-Content -Path $notesPath -Encoding UTF8
 
           gh release create $tag `
-            .\artifacts\QQStickerPanel-win-x64-framework-dependent.zip `
-            .\artifacts\QQStickerPanel-win-x64-self-contained.zip `
+            .\artifacts\QQStickerPanel-win-x64-framework-dependent.exe `
+            .\artifacts\QQStickerPanel-win-x64-self-contained.exe `
             --title "QQStickerPanel $tag" `
             --notes-file $notesPath `
             --latest
