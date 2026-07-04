@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish Windows release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore .\QQStickerPanel.sln
+
+      - name: Publish framework-dependent package
+        shell: pwsh
+        run: .\scripts\publish-win-x64.ps1 -DeploymentMode FrameworkDependentSingleFile
+
+      - name: Publish self-contained package
+        shell: pwsh
+        run: .\scripts\publish-win-x64.ps1 -DeploymentMode SelfContainedSingleFile
+
+      - name: Package assets
+        shell: pwsh
+        run: |
+          Compress-Archive -Force `
+            -Path .\artifacts\QQStickerPanel-win-x64-framework-dependent\QQStickerPanel.exe `
+            -DestinationPath .\artifacts\QQStickerPanel-win-x64-framework-dependent.zip
+
+          Compress-Archive -Force `
+            -Path .\artifacts\QQStickerPanel-win-x64-self-contained\QQStickerPanel.exe `
+            -DestinationPath .\artifacts\QQStickerPanel-win-x64-self-contained.zip
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          @"
+          ## Downloads
+
+          - `QQStickerPanel-win-x64-framework-dependent.zip`: smaller package. Requires Microsoft .NET 8 Windows Desktop Runtime x64.
+          - `QQStickerPanel-win-x64-self-contained.zip`: larger package. Does not require a separate .NET runtime installation.
+
+          ## Validation
+
+          - Built on GitHub Actions with .NET 8 and Windows.
+          "@ | Set-Content -Path $notesPath -Encoding UTF8
+
+          gh release create $tag `
+            .\artifacts\QQStickerPanel-win-x64-framework-dependent.zip `
+            .\artifacts\QQStickerPanel-win-x64-self-contained.zip `
+            --title "QQStickerPanel $tag" `
+            --notes-file $notesPath `
+            --latest
